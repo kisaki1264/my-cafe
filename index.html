@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  
+  
+  
+  
+  
+  
+  
+<link rel="icon" type="image/png" href="icon.png">
+
+<link rel="apple-touch-icon" href="icon.png">
+
+<link rel="manifest" href="manifest.json">
+  
+  
+  
+  
+  
+  
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مدیریت کافه</title>
+
+<style>
+body{
+    font-family:tahoma;
+    background:#f5f5f5;
+    margin:0;
+    padding:15px;
+}
+
+.box{
+    max-width:900px;
+    margin:auto;
+    background:white;
+    padding:15px;
+    border-radius:15px;
+    box-shadow:0 0 10px rgba(0,0,0,.1);
+}
+
+h1,h2{
+    text-align:center;
+}
+
+select,input,button{
+    width:100%;
+    padding:12px;
+    margin:5px 0;
+    border-radius:8px;
+    border:1px solid #ccc;
+    font-size:16px;
+    box-sizing:border-box;
+}
+
+button{
+    cursor:pointer;
+    border:none;
+}
+
+.add{background:#28a745;color:white;}
+.reset{background:#dc3545;color:white;}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:15px;
+}
+
+th,td{
+    border:1px solid #ddd;
+    padding:8px;
+    text-align:center;
+}
+
+th{background:#eee;}
+
+.preview{
+    background:#e8f5e9;
+    padding:10px;
+    border-radius:10px;
+    text-align:center;
+    font-weight:bold;
+    margin-top:10px;
+}
+
+.stats,.box2{
+    margin-top:15px;
+    padding:10px;
+    border-radius:10px;
+}
+
+.stats{background:#f0f0f0;}
+.debts{background:#fff3cd;}
+.done{background:#d1ecf1;}
+
+.smallBtn{
+    width:auto;
+    padding:6px 10px;
+    background:#28a745;
+    color:white;
+    border-radius:6px;
+}
+</style>
+</head>
+<body>
+
+<div class="box">
+
+<h1>☕ مدیریت کافه</h1>
+
+<select id="product" onchange="updatePrice()">
+    <option value="100000">قهوه 100٪ روبوستا</option>
+    <option value="120000">قهوه 70/30</option>
+    <option value="30000">آب معدنی بزرگ</option>
+        <option value="20000">آب معدنی کوچک</option>
+            <option value="180000">هات چاکلت</option>
+                <option value="160000">لاته</option>
+    <option value="150000">چای ماسالا شیر</option>
+    <option value="120000">نسکافه</option>
+        <option value="80000">آب میوه پالپ دار</option>
+        
+        
+           
+           <option value="0">شته</option>
+           
+</select>
+
+<input type="number" id="quantity" value="1" min="1" oninput="updatePrice()">
+
+
+<input type="number" id="customPrice" placeholder="مبلغ دستی (اختیاری)">
+
+
+
+<input type="text" id="customer" placeholder="نام مشتری (برای قرض)">
+
+<select id="status">
+    <option value="paid">✅ پرداخت شد</option>
+    <option value="debt">⏳ قرض</option>
+</select>
+
+<div class="preview">
+مبلغ: <span id="livePrice">100,000</span> تومان
+</div>
+
+<button class="add" onclick="addOrder()">ثبت سفارش</button>
+<button class="reset" onclick="resetAll()">شروع روز جدید</button>
+
+<table>
+<thead>
+<tr>
+<th>ساعت</th>
+<th>محصول</th>
+<th>تعداد</th>
+<th>مبلغ</th>
+<th>وضعیت</th>
+</tr>
+</thead>
+<tbody id="orders"></tbody>
+</table>
+
+<div class="stats">
+<p>🧾 تعداد سفارش: <span id="totalOrders">0</span></p>
+<p>💰 مجموع فروش: <span id="totalSales">0</span></p>
+</div>
+
+<div class="box2 debts">
+<h2>📒 بدهکارها</h2>
+<div id="debtList"></div>
+<p><b>مجموع بدهی: <span id="totalDebt">0</span></b></p>
+</div>
+
+<div class="box2 done">
+<h2>✔️ تسویه‌شده‌ها</h2>
+<div id="paidList"></div>
+</div>
+
+</div>
+
+<script>
+
+let orders = JSON.parse(localStorage.getItem("cafe")) || [];
+
+function save(){
+    localStorage.setItem("cafe", JSON.stringify(orders));
+}
+
+function updatePrice(){
+    let price = Number(document.getElementById("product").value);
+    let qty = Number(document.getElementById("quantity").value || 1);
+    document.getElementById("livePrice").innerText = (price*qty).toLocaleString();
+}
+
+function addOrder(){
+
+    let p = document.getElementById("product");
+    let product = p.options[p.selectedIndex].text;
+
+    let qty = Number(document.getElementById("quantity").value);
+    let customer = document.getElementById("customer").value;
+    let status = document.getElementById("status").value;
+
+    let manual = Number(document.getElementById("customPrice").value);
+
+let price = manual > 0 ? manual : Number(p.value) * qty;
+
+    let now = new Date();
+    let time = now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0");
+
+    orders.push({
+        time,
+        product,
+        qty,
+        price,
+        customer,
+        status,
+        paidTime:null
+    });
+
+    save();
+    render();
+
+    document.getElementById("quantity").value = 1;
+    document.getElementById("customer").value = "";
+    
+    document.getElementById("customPrice").value = "";
+    
+    updatePrice();
+}
+
+function settle(i){
+
+    let now = new Date();
+    let time = now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0");
+
+    orders[i].status = "paid";
+    orders[i].paidTime = time;
+
+    save();
+    render();
+}
+
+function render(){
+
+    let tbody = document.getElementById("orders");
+    tbody.innerHTML = "";
+
+    let totalSales = 0;
+    let debt = 0;
+
+    let debtHTML = "";
+    let paidHTML = "";
+
+    orders.forEach((o,i)=>{
+
+    if(o.status=="paid"){
+        totalSales += o.price;
+    }
+
+    let statusText = o.status=="paid"?"✔️ پرداخت شد":"⏳ قرض";
+    
+    
+        tbody.innerHTML += `
+        <tr>
+        <td>${o.time}</td>
+        <td>${o.product}</td>
+        <td>${o.qty}</td>
+        <td>${o.price.toLocaleString()}</td>
+        <td>${statusText}</td>
+        </tr>
+        `;
+
+        if(o.status=="debt"){
+            debt += o.price;
+
+            debtHTML += `
+            <p>
+            ${o.customer || "بدون نام"} - ${o.price.toLocaleString()}
+            <button class="smallBtn" onclick="settle(${i})">تسویه</button>
+            </p>
+            `;
+        }
+
+        if(o.status=="paid" && o.paidTime){
+            paidHTML += `
+            <p>
+            ${o.customer || "بدون نام"} - ${o.price.toLocaleString()} ✔️ (${o.paidTime})
+            </p>
+            `;
+        }
+    });
+
+    document.getElementById("totalOrders").innerText = orders.length;
+    document.getElementById("totalSales").innerText = totalSales.toLocaleString();
+
+    document.getElementById("debtList").innerHTML = debtHTML;
+    document.getElementById("paidList").innerHTML = paidHTML;
+    document.getElementById("totalDebt").innerText = debt.toLocaleString();
+}
+
+function resetAll(){
+
+    if(confirm("شروع روز جدید؟ سفارش‌های تسویه‌شده پاک می‌شوند اما بدهکارها می‌مانند.")){
+
+        orders = orders.filter(o => o.status == "debt");
+
+        save();
+        render();
+    }
+}
+
+updatePrice();
+render();
+
+</script>
+
+</body>
+</html>
